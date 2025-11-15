@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Prediction System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .loading-indicator, .error-message, .success-message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            z-index: 1000;
+            display: none;
+        }
+        .loading-indicator {
+            background: #137fec;
+            color: white;
+        }
+        .error-message {
+            background: #ef4444;
+            color: white;
+        }
+        .success-message {
+            background: #16a34a;
+            color: white;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <h1 class="text-xl font-bold text-gray-900">Stock Prediction System</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="#data" class="text-gray-700 hover:text-blue-600 px-3 py-2">Data</a>
+                    <a href="#features" class="text-gray-700 hover:text-blue-600 px-3 py-2">Features</a>
+                    <a href="#model" class="text-gray-700 hover:text-blue-600 px-3 py-2">Model</a>
+                    <a href="#predictions" class="text-gray-700 hover:text-blue-600 px-3 py-2">Predictions</a>
+                    <a href="#metrics" class="text-gray-700 hover:text-blue-600 px-3 py-2">Metrics</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Data Upload Section -->
+        <section id="data" class="mb-8">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-2xl font-bold mb-4">Data Upload</h2>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Upload CSV File</label>
+                    <input type="file" id="file-input" accept=".csv" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                    <button onclick="handleFileUpload()" class="mt-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Upload</button>
+                </div>
+                <div id="data-info" class="mt-4">
+                    <p class="text-gray-500">Upload a CSV file to get started</p>
+                    <div id="dataset-info" class="mt-2 hidden">
+                        <p><strong>Total Rows:</strong> <span id="total-rows">-</span></p>
+                        <p><strong>Total Columns:</strong> <span id="total-columns">-</span></p>
+                        <p><strong>Date Range:</strong> <span id="date-start">-</span> to <span id="date-end">-</span></p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Feature Engineering Section -->
+        <section id="features" class="mb-8">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-2xl font-bold mb-4">Feature Engineering</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Select Columns</label>
+                        <div class="flex gap-2">
+                            <select id="columns" class="block w-full rounded-md border-gray-300 shadow-sm">
+                                <option value="">-- Select a column --</option>
+                                <!-- Populated by config.js -->
+                            </select>
+                            <button onclick="addSelectedColumn()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 whitespace-nowrap">Add</button>
+                        </div>
+                        <div id="selected-columns" class="mt-2 flex flex-wrap gap-2">
+                            <!-- Selected columns will appear here as chips -->
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Window Size 1</label>
+                        <input type="number" id="window-size-1" class="block w-full rounded-md border-gray-300 shadow-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Window Size 2</label>
+                        <input type="number" id="window-size-2" class="block w-full rounded-md border-gray-300 shadow-sm">
+                    </div>
+                </div>
+                <button onclick="handleGenerateFeatures()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Generate Features</button>
+                <div id="feature-info" class="mt-4">
+                    <p class="text-gray-500">Generate features to see results</p>
+                    <div id="feature-results" class="mt-2 hidden">
+                        <p><strong>Feature Count:</strong> <span id="feature-count">0</span></p>
+                        <div id="feature-names-container" class="mt-2 flex flex-wrap gap-2"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Model Training Section -->
+        <section id="model" class="mb-8">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-2xl font-bold mb-4">Model Training</h2>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Train/Test Split (%)</label>
+                    <input type="range" id="train-split-slider" min="50" max="90" value="80" class="w-full" oninput="updateTrainSplitDisplay()">
+                    <div class="flex justify-between text-sm text-gray-600">
+                        <span id="train-size-display">80%</span>
+                        <span id="test-size-display">20%</span>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Target Column</label>
+                    <select id="target-column" class="block w-full rounded-md border-gray-300 shadow-sm">
+                        <!-- Populated by config.js -->
+                    </select>
+                </div>
+                <button onclick="handleTrainModel()" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">Train Model</button>
+                <div id="model-info" class="mt-4">
+                    <p class="text-gray-500">Train a model to see information</p>
+                    <div id="model-results" class="mt-2 hidden">
+                        <p><strong>Model Type:</strong> <span id="model-type">-</span></p>
+                        <p><strong>AIC:</strong> <span id="model-aic">-</span></p>
+                        <p><strong>Parameters:</strong> <span id="model-params">-</span></p>
+                        <p><strong>Training Rows:</strong> <span id="training-rows">-</span></p>
+                        <p><strong>Testing Rows:</strong> <span id="testing-rows">-</span></p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Predictions Section -->
+        <section id="predictions" class="mb-8">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-2xl font-bold mb-4">Predictions</h2>
+                <button onclick="handleMakePredictions()" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 mb-4">Generate Predictions</button>
+                <div id="predictions-chart" class="mt-4"></div>
+                <div id="predictions-table" class="mt-4 overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actual</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Predicted</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Error</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Error %</th>
+                            </tr>
+                        </thead>
+                        <tbody id="predictions-table-body" class="bg-white divide-y divide-gray-200">
+                            <tr>
+                                <td colspan="5" class="px-6 py-4 text-center text-gray-500">No predictions yet</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Metrics Section -->
+        <section id="metrics" class="mb-8">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-2xl font-bold mb-4">Performance Metrics</h2>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                    <div class="bg-gray-50 p-4 rounded">
+                        <p class="text-sm text-gray-600">MSE</p>
+                        <p id="mse-value" class="text-2xl font-bold">-</p>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded">
+                        <p class="text-sm text-gray-600">RMSE</p>
+                        <p id="rmse-value" class="text-2xl font-bold">-</p>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded">
+                        <p class="text-sm text-gray-600">MAE</p>
+                        <p id="mae-value" class="text-2xl font-bold">-</p>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded">
+                        <p class="text-sm text-gray-600">MAPE</p>
+                        <p id="mape-value" class="text-2xl font-bold">-</p>
+                    </div>
+                </div>
+                <button onclick="handleLoadMetrics()" class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">Load Metrics</button>
+            </div>
+        </section>
+    </main>
+
+    <!-- Scripts - Load in order (utils first for error handling) -->
+    <!-- Cache-busting: Add timestamp to force reload -->
+    <script>
+        const CACHE_BUST = '?v=' + Date.now();
+    </script>
+    <script src="/static/js/utils.js?v=20241220"></script>
+    <script src="/static/js/config.js?v=20241220"></script>
+    <script src="/static/js/data.js?v=20241220"></script>
+    <script src="/static/js/model.js?v=20241220"></script>
+    <script src="/static/js/metrics.js?v=20241220"></script>
+    <script src="/static/js/visualizations.js?v=20241220"></script>
+    
+    <script>
+        // Global error handler
+        window.addEventListener('error', function(e) {
+            console.error('Script error:', e);
+            if (typeof showError === 'function') {
+                showError('A script error occurred. Check console for details.');
+            }
+        });
+        
+        // Check if functions are loaded
+        function checkFunctionsLoaded() {
+            const functions = ['uploadDataFile', 'generateFeatures', 'trainModel', 'makePredictions', 'loadMetrics'];
+            const missing = functions.filter(f => typeof window[f] !== 'function');
+            if (missing.length > 0) {
+                console.warn('Functions not yet loaded:', missing);
+                return false;
+            }
+            console.log('✅ All functions loaded');
+            return true;
+        }
+        
+        // Check after a delay
+        setTimeout(checkFunctionsLoaded, 1000);
+    </script>
+    
+    <script>
+        // Wait for all scripts to load
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Page loaded, checking functions...');
+            
+            // Wait a bit for scripts to load
+            setTimeout(function() {
+                if (checkFunctionsLoaded()) {
+                    console.log('✅ All functions loaded successfully');
+                } else {
+                    console.error('❌ Some functions are missing');
+                }
+                
+                // Initialize updateTrainSplitDisplay on page load
+                if (typeof updateTrainSplitDisplay === 'function') {
+                    updateTrainSplitDisplay();
+                }
+            }, 500);
+        });
+
+        // Helper functions for buttons - these call the functions from the JS modules
+        async function handleFileUpload() {
+            console.log('handleFileUpload called');
+            console.log('Checking for uploadDataFile:', typeof window.uploadDataFile);
+            
+            const fileInput = document.getElementById('file-input');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Please select a file first');
+                return;
+            }
+            
+            // Try to use the exposed function first
+            if (typeof window.uploadDataFile === 'function') {
+                console.log('✅ Using exposed uploadDataFile function');
+                try {
+                    await window.uploadDataFile(file);
+                    return;
+                } catch (error) {
+                    console.error('Error in uploadDataFile:', error);
+                    alert('Upload failed: ' + error.message);
+                    return;
+                }
+            }
+            
+            // Fallback: Direct upload implementation if function not loaded
+            console.warn('uploadDataFile not found, using fallback implementation');
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                console.log('Uploading file directly...');
+                const response = await fetch(`${window.location.origin}/api/data/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Upload failed');
+                }
+                
+                const result = await response.json();
+                alert('File uploaded successfully!');
+                
+                // Try to reload dataset info if available
+                if (typeof window.loadDatasetInfo === 'function') {
+                    await window.loadDatasetInfo();
+                } else {
+                    // Reload page to show updated data
+                    setTimeout(() => location.reload(), 1000);
+                }
+                
+                return result;
+            } catch (error) {
+                console.error('Upload error:', error);
+                alert('Upload failed: ' + error.message);
+            }
+        }
+
+        async function handleGenerateFeatures() {
+            console.log('handleGenerateFeatures called');
+            // Wait for the module function to be available
+            let retries = 0;
+            while (typeof window.generateFeatures !== 'function' && retries < 10) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                retries++;
+            }
+            
+            if (typeof window.generateFeatures === 'function') {
+                // Call the module function directly (don't overwrite it)
+                await window.generateFeatures();
+            } else {
+                console.error('generateFeatures function not found');
+                alert('Error: Feature generation function not loaded. Please refresh the page.');
+            }
+        }
+
+        async function handleTrainModel() {
+            console.log('handleTrainModel called');
+            // Wait for the module function to be available
+            let retries = 0;
+            while (typeof window.trainModel !== 'function' && retries < 10) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                retries++;
+            }
+            
+            if (typeof window.trainModel === 'function') {
+                // Call the module function directly (don't overwrite it)
+                await window.trainModel();
+            } else {
+                console.error('trainModel function not found');
+                alert('Error: Model training function not loaded. Please refresh the page.');
+            }
+        }
+
+        async function handleMakePredictions() {
+            console.log('handleMakePredictions called');
+            // Wait for the module function to be available
+            let retries = 0;
+            while (typeof window.makePredictions !== 'function' && retries < 10) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                retries++;
+            }
+            
+            if (typeof window.makePredictions === 'function') {
+                // Call the module function directly (don't overwrite it)
+                await window.makePredictions();
+            } else {
+                console.error('makePredictions function not found');
+                alert('Error: Prediction function not loaded. Please refresh the page.');
+            }
+        }
+
+        async function handleLoadMetrics() {
+            console.log('handleLoadMetrics called');
+            // Wait for the module function to be available
+            let retries = 0;
+            while (typeof window.loadMetrics !== 'function' && retries < 10) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                retries++;
+            }
+            
+            if (typeof window.loadMetrics === 'function') {
+                // Call the module function directly (don't overwrite it)
+                await window.loadMetrics();
+            } else {
+                console.error('loadMetrics function not found');
+                alert('Error: Metrics function not loaded. Please refresh the page.');
+            }
+        }
+
+        function updateTrainSplitDisplay() {
+            const slider = document.getElementById('train-split-slider');
+            if (slider) {
+                const value = slider.value;
+                const trainDisplay = document.getElementById('train-size-display');
+                const testDisplay = document.getElementById('test-size-display');
+                if (trainDisplay) trainDisplay.textContent = value + '%';
+                if (testDisplay) testDisplay.textContent = (100 - value) + '%';
+            }
+        }
+
+        // Expose wrapper functions globally for onclick handlers
+        // NOTE: Don't overwrite module functions (makePredictions, trainModel, etc.)
+        // They are already exposed by their respective modules
+        window.handleFileUpload = handleFileUpload;
+        window.handleGenerateFeatures = handleGenerateFeatures;
+        window.handleTrainModel = handleTrainModel;
+        window.handleMakePredictions = handleMakePredictions;
+        window.handleLoadMetrics = handleLoadMetrics;
+        window.updateTrainSplitDisplay = updateTrainSplitDisplay;
+    </script>
+</body>
+</html>
+
